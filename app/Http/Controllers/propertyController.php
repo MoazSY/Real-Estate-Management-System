@@ -54,7 +54,7 @@ class propertyController extends Controller
             'descreption'=>'required',
             'nameState'=>'required',
             'area'=>'required|numeric|min:10'
-            
+
         ]);
         if($validation->fails()){
 
@@ -75,7 +75,7 @@ $location1=location_model::where('state_id','=',$stateId)->where('address','=',$
 
     if($location1 ){
     $locationId=$location1->id;
-        
+
 $request['users_id']=auth()->user()->id;
 $avgSell=$request['price']/$request['area'];
 $avgRent=$request['monthlyRent']/$request['area'];
@@ -184,7 +184,7 @@ $location=location_model::create([
     return Response()->json(['state'=>$state,'location'=>$location,'property'=>$property]);
 
      }
-     
+
     }
 
 
@@ -199,30 +199,30 @@ $location=location_model::create([
 
 
 
-    if(!$propertyprice->isEmpty() && !$propertyRent->isEmpty()){
+if(!$propertyprice->isEmpty() && !$propertyRent->isEmpty()){
 
-return Response()->json(['property sell '=>$propertyprice,'property rent'=>$propertyRent]);
+return Response()->json(['property sell'=>$propertyprice,'property rent'=>$propertyRent]);
 
  }
 
  if(!$propertyprice->isEmpty() && $propertyRent->isEmpty()){
 
- return Response()->json(['property sell '=>$propertyprice]);
-                        
+    return Response()->json(['property sell'=>$propertyprice]);
+
  }
-     
+
  if($propertyprice->isEmpty() && !$propertyRent->isEmpty()){
 
-return Response()->json(['property rent'=>$propertyRent]);
-                                                                                           
- } 
+    return Response()->json(['property rent'=>$propertyRent]);
+
+ }
 
   if($propertyprice->isEmpty() && $propertyRent->isEmpty()){
 
- return Response()->json(['result'=>null]);
-                                                                                                                                             
+    return Response()->json(['result'=>null]);
+
   }
-        
+
     }
 
     public function getproperty( $id){
@@ -236,7 +236,7 @@ return Response()->json(['property rent'=>$propertyRent]);
  $countRate=rate_property_model::where('users_id','=',$userid)->count();
  if($countRate==0){
     $rate=0;
-    
+
  $user=User::find($userid);
  $nameuser=$user->name;
  $userimage=$user->image;
@@ -249,8 +249,8 @@ return Response()->json(['property rent'=>$propertyRent]);
  return Response()->json(['owner name'=>$nameuser,'owner images'=>$userimage,'rate'=>$rate,'locationName'=>$name,'namestate'=>$namestate,'property'=> $property]);
 
  }
- $rate = floatval($rateSum) / floatval($countRate);  
- 
+ $rate = floatval($rateSum) / floatval($countRate);
+
  $user=User::find($userid);
  $nameuser=$user->name;
  $userimage=$user->image;
@@ -278,7 +278,7 @@ return Response()->json(['property rent'=>$propertyRent]);
      if($countRate==0){
         $rate=0.0;
      } else
-    $rate = floatval($rateSum) / floatval($countRate);  
+    $rate = floatval($rateSum) / floatval($countRate);
     $user=User::find($userid);
     $nameuser=$user->name;
     $userimage=$user->image;
@@ -286,15 +286,16 @@ return Response()->json(['property rent'=>$propertyRent]);
     $location=location_model::find($locationid);
     $stateid=$location->state_id;
     $state=state_model::find($stateid);
-    
+
     $h[]=array(
-    "owner name"=>$nameuser,
-    "owner image"=>$userimage,
-    "rate"=>sprintf("%.1f", $rate),      
-    "property"=>$pro,
-    "location"=>$location,
-    "state"=>$state
-    
+        "owner name"=>$nameuser,
+        'owner id'=>$user->id,
+        'owner phone'=>$user->phone,
+        "owner image"=>$userimage,
+        "rate"=>sprintf("%.1f", $rate),
+        "property"=>$pro,
+        "location"=>$location,
+        "state"=>$state
     );
     }
     else{
@@ -305,31 +306,34 @@ return Response()->json(['property rent'=>$propertyRent]);
 }
 
 if( empty($h) ){
-    return response()->json(null);
+    return response()->json(['result'=>null]);
 }else
-return Response()->json($h);
+return Response()->json(['result'=>$h]);
 }
-else return null;
+else return response()->json(['result'=>null]);;
     }
 
 
-    public function upload_image(Request $request){
-        $images=array();
-        if($request['image']){
-      
-            $files=$request->file('image');
-                   foreach($files  as  $image){
-                        $filename=$image->getClientOriginalName();
-                        $filenameExtention= uniqid() . '.' .$image->getClientOriginalExtension();
-                        $image->move('public/Image/',$filenameExtention);
-                        $url=url('public/Image/',$filenameExtention);
-                        array_push($images,$url);
+    public function upload_image(Request $request)
+    {
+
+        $images = array();
+        if ($request->hasFile("images")) {
+            $files = $request->file("images");
+            foreach ($files as $file) {
+
+                $filename = uniqid() . '.' . $file->getClientOriginalExtension();
+
+                $file->move('public/Image/', $filename);
+
+                $url = url('public/Image/' . $filename);
+                array_push($images, $url);
+
             }
-             return $images;
-        }  
-        else return null;          
-    }
+            return $images;
 
+        } else return null;
+    }
 
     // public function upload_image(Request $request)
 
@@ -397,7 +401,7 @@ else return null;
     //         'video' => 'required|file|mimetypes:video/mp4'
 
     //   ]);
-      
+
       $video=$request->file('video');
 
       if ($request['video']){
@@ -405,11 +409,12 @@ else return null;
         $filenameExtention= time(). '.' .$video->getClientOriginalExtension();
         $video->move('public/video/',$filenameExtention);
         $url=url('public/video/',$filenameExtention);
-      
+
       return $url;
       }
       else return null;
     }
+
 public function edit_property(Request $request){
     $userid=auth()->user()->id;
     $property=property_special_model::where('users_id','=',$userid)->where('id','=',$request['id'])->first();
@@ -417,6 +422,10 @@ public function edit_property(Request $request){
         $property->update(Request()->all());
 if($request->hasFile('image')){
     $property->image=$this->upload_image($request);
+
+    if($request->hasFile('video')){
+        $property->video=$this->upload_video($request);
+    }
         // $property->update(Request()->all());
     $property->save();
     return response()->json(['property edit'=> $property]);
@@ -429,7 +438,7 @@ if($request->hasFile('image')){
 
 }
     return response()->json(['dont have any property to edit']);
-    
+
 }
 public function delete_property(Request $request){
 

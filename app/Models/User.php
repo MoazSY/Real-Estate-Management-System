@@ -58,7 +58,7 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'suspended_at' => 'datetime',
-           
+        'image' => 'array' 
     ];
 
 

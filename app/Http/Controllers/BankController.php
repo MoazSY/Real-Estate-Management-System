@@ -118,9 +118,9 @@ public function show_my_account(){
     $userid=auth()->user()->id;
     $account=Account_bank::where('users_id','=',$userid)->get();
     if(!$account->isEmpty())
-    return Response()->json([$account]);
+    return Response()->json(['result'=>$account[0]]);
 
-    return Response()->json(["dont have any account"]);
+    return Response()->json(['result'=>null]);
 }
 
 public function recharge_my_account( Request $request )
@@ -168,20 +168,20 @@ if($bank_account1){
 $value_of_account1=$bank_account1->value_of_account;
 }
 else{
-    return response()->json(['buyer dont have any bank account']);
+    return response()->json(['message'=>'buyer dont have any bank account']);
 }
 
 $property=property_special_model::find($idproperty);
-if($property->wasSell_or_wasRented=='wasSell'){
-    return response()->json(['message'=>'this property was seeled so you cant buy this']);
+if($property->wasSell_or_wasRented =='wasSell'){
+    return response()->json(['message'=>'this property was sold so you can not buy it']);
 }
 if($property->rent_or_sell=='rent'){
-    return response()->json(['message'=>'this property is rent  so you cant sell this']);
+    return response()->json(['message'=>'this property is rent  so you can not sell it']);
 }
 $userid2=$property->users_id;
 $price=$property->price;
 if($value_of_account1 < $price){
-return response()->json(['you dont have in tour account enough money to buy this proprty']);
+return response()->json(['message'=>'You do not have enough balance in your bank account to buy this property']);
 }
 $bank_account2=Account_bank::where('users_id','=',$userid2)->first();
 if($bank_account2){
@@ -190,7 +190,7 @@ if($bank_account2){
 
 }
 else{
-    return response()->json(['seller dont have any bank account']);
+    return response()->json(['message'=>'seller dont have any bank account']);
 }
 
 
@@ -208,7 +208,7 @@ else{
  ]);
 
 
- return response()->json(['sell operation was done successfully',$sell]);
+ return response()->json(['message'=>'sell operation was done successfully',$sell]);
 }
 
 
@@ -265,6 +265,188 @@ else{
 
  return response()->json(['rent operation was done successfully',$rent]);
 }
+
+///web
+
+public function loginb(Request $request)
+{
+    $credentials = $request->only('email', 'password');
+//dd($credentials);
+
+    if (Auth::guard('web')->attempt($credentials)) {
+//
+        return redirect()->route('Bankdashboard');
+    } else {
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            session()->put('error', 'Invalid email');
+            return redirect()->back();
+        } else {
+            session()->put('error', 'Invalid password');
+            return redirect()->back();
+        }
+
+    }
+}
+public function logoutb(Request $request)
+{
+
+    Auth::logout();
+    return redirect('Bank');
+}
+
+public function showBalance(Request $request)
+{
+    $user=Auth::user();
+//    $accountNumber = $request->input('account_number');
+
+    $accounts = Account_bank::where('users_id', $user->id)->get();
+
+    if (!$accounts->isEmpty()) {
+        $a=[];
+        foreach ($accounts as $account){
+            $accountNumber=$account->number_account;
+            $balance = $account->value_of_account;
+            $bank_id=$account->bank_id;
+            $bank=Bank_model::find($bank_id)->name;
+            $a[]= (object)(['accountNumber'=>$accountNumber,'bank'=>$bank,'balance'=>$balance]);
+        }
+
+        return view('Bank.show-account',['accounts' => $a]);
+    } else {
+        return view('Bank.show-account',['accounts'=>[]]);
+
+    }
+}
+
+
+public function banks()
+{
+    // Retrieve bank information from the database
+    $banks = Bank_model::all();
+    $b=[];
+    foreach ($banks as $bank)
+    {
+        $location_id=$bank->location_id;
+        $location=location_model::find($location_id);
+        $location1=$location->address;
+        $state=state_model::find($location->state_id)->nameState;
+        $b[]=array(
+            "Id"=>$bank->id,
+            "name"=>$bank->name,
+            "location"=>$location1,
+            "state"=>$state,
+        );
+
+    }
+
+    // Pass the bank information to the dashboard view
+    return view('Bank.Bankdashboard', compact('b'));
+}
+
+public function createAccount(Request $request)
+{
+    $bankId = $request->input('bankId');
+    $amount = $request->input('amount');
+    $password=$request->input('password');
+    $user=Auth::user()->id;
+
+    $bank = Bank_model::where('id', $bankId)->first();
+    if (!$bank) {
+        session()->put('bankIdInvalid', true);
+        return redirect()->back();    }
+
+    $accountNumber = $this->generateAccountNumber();
+
+    Account_bank::create([
+        'bank_id' => $bankId,
+        'number_account' => $accountNumber,
+        'value_of_account' => $amount,
+        'account_password'=>Hash::make($password),
+        'users_id' => $user,
+    ]);
+
+    session()->put('accountNumber', $accountNumber);
+    session()->put('password',$password);
+
+    return redirect()->back();
+}
+
+private function generateAccountNumber()
+{
+    $accountNumber = mt_rand(1000000, 9999999);
+
+
+    $existingAccount = Account_bank::where('number_account', $accountNumber)->first();
+    if ($existingAccount) {
+        return $this->generateAccountNumber();
+    }
+
+    return $accountNumber;
+}
+
+public function addMoney(Request $request)
+{
+
+
+    $accountNumber = $request->input('account_number');
+    $password=$request->input('account_password');
+    $amount = $request->input('amount');
+    $user=Auth::user();
+//    dd($user->id);
+    $accounts = Account_bank::where('users_id', $user->id)->pluck('number_account')->toArray();
+    if(!$accounts){
+        session()->put('error','You have no bank accounts');
+        return redirect()->back();
+    }
+//       if ( $account->number_account !== $accountNumber) {
+//
+//            session()->put('AccountNumberInvalid', true);
+//            return redirect()->back();
+//        }
+    if (!in_array($accountNumber, $accounts)) {
+        session()->put('AccountNumberInvalid', true);
+        return redirect()->back();
+    }
+    $account = Account_bank::where('number_account', $accountNumber)->first();
+//        dd(Hash::make($password));
+    if (Hash::check($password , $account->account_password)) {
+        session()->put('PasswordInvalid', true);
+        return redirect()->back();
+    }
+
+//        if (! $account->account_password = $password)
+//        {
+//            session()->put('PasswordInvalid',true);
+//            return redirect()->back();
+//        }
+
+//
+//        if(!Auth::guard('account')->attempt($request->only(['users_id'=>$user,'number_account'=>$accountNumber,'account_password'=>$password]),true)){
+//            if(!Account_bank::where('users_id','=',$user)->first()){
+//                session()->put('error','Enter');
+//
+//            }
+//            if(!Account_bank::where('number_account','=',$numberAccount)->first()){
+//                return Response()->json(['message'=>'error  bank not found']);
+//
+//            }
+//        }
+    $account = Account_bank::where(['users_id'=>$user->id,'number_account'=> $accountNumber])->first();
+//        if (!$account) {
+//            session()->put('AccountNumberInvalid', true);
+//            return redirect()->back();    }
+
+    $account->value_of_account +=$amount;
+    $account->save();
+
+
+    session()->put('message', 'the money is added to your balance');
+
+    return redirect()->back();
+}
+
 
 
 }

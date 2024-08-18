@@ -28,6 +28,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::middleware(['auth:sanctum'])->group(function (){
 Route::post('add_property',[propertyController::class,'add_property']);
 Route::post('updateuser',[usercontroller::class,'update']);
+Route::post('updateAdmin',[adminController::class,'update']);
+
 Route::post('logout',[usercontroller::class,'logout']);
 Route::post('logout_admin',[adminController::class,'logout_admin']);
 
@@ -46,10 +48,12 @@ Route::post('inform',[adminController::class,'inform']);
 Route::post('delete_property',[propertyController::class,'delete_property']);
 
 });
-Route::post('suspend',[adminController::class,'suspend']);
-Route::post('unsuspend',[adminController::class,'unsuspend']);
+Route::post('suspend',[adminController::class,'suspend1']);
+Route::post('unsuspend',[adminController::class,'unsuspend1']);
 
 Route::post('rigester',[usercontroller::class,'Rigester']);
+Route::get('delete/{id}',[usercontroller::class,'delete']);
+
 Route::post('rigester1',[adminController::class,'Rigester']);
 Route::post('login1',[adminController::class,'login']);
 Route::post('login',[usercontroller::class,'login']);
@@ -68,3 +72,5 @@ Route::any('auth/google/callback',[usercontroller::class,'handleCallback']);
 
 Route::post('forget',[usercontroller::class,'forget']);
 // Route::post('reset',[usercontroller::class,'reset']);
+Route::post('addadmin',[adminController::class,'addadmin'])->name('addadmin');
+Route::get('sells', [adminController::class, 'sells'])->name('sells');

@@ -45,7 +45,7 @@ return [
             'provider'=>'bank_account',
         ],
 
-        'Admin'=>[
+        'admin'=>[
             'driver'=>'session',
             'provider'=>'admin',
         ]
